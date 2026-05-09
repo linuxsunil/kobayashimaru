@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PR Firestorm — The No-Win Crisis Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #0f0e0d;
+  --paper: #f5f1eb;
+  --paper2: #ede8e0;
+  --paper3: #e4dfd5;
+  --red: #c0392b;
+  --red-light: #f5ded9;
+  --amber: #b5620a;
+  --amber-light: #f8edd8;
+  --teal: #0e6655;
+  --teal-light: #d4ede8;
+  --blue: #1a4f8a;
+  --blue-light: #d9e8f7;
+  --muted: #7a746c;
+  --border: rgba(15,14,13,0.12);
+  --border-strong: rgba(15,14,13,0.25);
+  --font-display: 'Bebas Neue', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--paper);
+  color: var(--ink);
+  min-height: 100vh;
+  line-height: 1.6;
+  font-size: 15px;
+}
+
+/* ── NOISE TEXTURE OVERLAY ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+}
+
+.page { position: relative; z-index: 1; max-width: 860px; margin: 0 auto; padding: 0 1.5rem 4rem; }
+
+/* ── MASTHEAD ── */
+.masthead {
+  border-bottom: 2px solid var(--ink);
+  padding: 2rem 0 1rem;
+  margin-bottom: 0;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  gap: 1rem;
+}
+.masthead-left {}
+.issue-line {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.masthead h1 {
+  font-family: var(--font-display);
+  font-size: clamp(52px, 10vw, 88px);
+  line-height: 0.9;
+  letter-spacing: 0.01em;
+  color: var(--ink);
+}
+.masthead h1 span { color: var(--red); }
+.masthead-tagline {
+  font-size: 13px;
+  color: var(--muted);
+  font-style: italic;
+  margin-top: 10px;
+  max-width: 360px;
+  line-height: 1.5;
+}
+.kobayashi-badge {
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  border-radius: 2px;
+  white-space: nowrap;
+  align-self: flex-start;
+}
+
+/* ── SETUP SECTION ── */
+.api-setup {
+  background: var(--paper2);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  padding: 1.25rem;
+  margin: 1.5rem 0;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.api-setup-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.api-setup-body { flex: 1; }
+.api-setup-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.api-setup-desc { font-size: 13px; color: var(--muted); margin-bottom: 10px; line-height: 1.5; }
+.api-row { display: flex; gap: 8px; }
+.api-input {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+  background: var(--paper);
+  color: var(--ink);
+  outline: none;
+}
+.api-input:focus { border-color: var(--ink); }
+.api-btn {
+  padding: 8px 16px;
+  background: var(--ink);
+  color: var(--paper);
+  border: none;
+  border-radius: 3px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.api-btn:hover { background: #2c2b29; }
+.api-status { font-family: var(--font-mono); font-size: 12px; margin-top: 6px; }
+.api-status.ok { color: var(--teal); }
+.api-status.err { color: var(--red); }
+
+/* ── INCIDENT BANNER ── */
+.incident-banner {
+  border: 1px solid var(--border-strong);
+  border-left: 4px solid var(--red);
+  background: var(--red-light);
+  padding: 1.25rem 1.5rem;
+  margin: 1.5rem 0;
+  border-radius: 0 4px 4px 0;
+}
+.incident-kicker {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--red);
+  margin-bottom: 6px;
+}
+.incident-headline {
+  font-family: var(--font-display);
+  font-size: 28px;
+  line-height: 1.05;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+.incident-body { font-size: 14px; color: #4a3a35; line-height: 1.65; }
+
+/* ── COMPOSER ── */
+.composer-section { margin: 2rem 0; }
+.section-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.presets { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.preset-btn {
+  font-size: 12px;
+  font-family: var(--font-mono);
+  padding: 5px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 2px;
+  background: var(--paper);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.preset-btn:hover { background: var(--paper3); color: var(--ink); border-color: var(--ink); }
+
+.composer-box {
+  position: relative;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--paper);
+  overflow: hidden;
+}
+.composer-box:focus-within { border-color: var(--ink); }
+.statement-textarea {
+  width: 100%;
+  min-height: 130px;
+  padding: 1rem;
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.7;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--ink);
+  resize: vertical;
+}
+.composer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+  background: var(--paper2);
+}
+.char-counter { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.char-counter.warn { color: var(--amber); }
+.char-counter.over { color: var(--red); }
+
+.action-row { display: flex; gap: 10px; align-items: center; margin-top: 1rem; }
+.release-btn {
+  padding: 11px 28px;
+  background: var(--red);
+  color: white;
+  border: none;
+  border-radius: 3px;
+  font-family: var(--font-display);
+  font-size: 22px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.release-btn:hover:not(:disabled) { background: #a93226; }
+.release-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.reset-btn {
+  padding: 11px 18px;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  cursor: pointer;
+}
+.reset-btn:hover { color: var(--ink); border-color: var(--ink); }
+.status-msg { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+
+/* ── SCOREBOARD ── */
+.scoreboard {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--border-strong);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 1.5rem 0;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: all 0.4s ease;
+}
+.scoreboard.visible { opacity: 1; transform: translateY(0); }
+.score-cell {
+  background: var(--paper);
+  padding: 1.25rem;
+  text-align: center;
+}
+.score-cell-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.score-cell-value {
+  font-family: var(--font-display);
+  font-size: 44px;
+  line-height: 1;
+}
+.score-cell-value.good { color: var(--teal); }
+.score-cell-value.bad { color: var(--red); }
+.score-cell-value.neutral { color: var(--ink); }
+
+/* ── PERSONAS ── */
+.personas-section { margin: 2rem 0; }
+.persona-cards { display: flex; flex-direction: column; gap: 1px; background: var(--border-strong); border: 1px solid var(--border-strong); border-radius: 4px; overflow: hidden; }
+
+.persona-card { background: var(--paper); transition: background 0.2s; }
+.persona-header {
+  display: grid;
+  grid-template-columns: 48px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 1rem 1.25rem;
+}
+.persona-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 18px;
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+}
+.av-blue { background: var(--blue-light); color: var(--blue); }
+.av-red { background: var(--red-light); color: var(--red); }
+.av-teal { background: var(--teal-light); color: var(--teal); }
+
+.persona-meta {}
+.persona-name { font-weight: 500; font-size: 15px; }
+.persona-role { font-size: 12px; color: var(--muted); margin-top: 1px; }
+
+.outrage-chip {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 2px;
+  white-space: nowrap;
+  letter-spacing: 0.05em;
+  transition: all 0.3s;
+}
+.chip-waiting { background: var(--paper3); color: var(--muted); }
+.chip-loading { background: var(--paper3); color: var(--muted); }
+.chip-low { background: var(--teal-light); color: var(--teal); }
+.chip-mid { background: var(--amber-light); color: var(--amber); }
+.chip-high { background: var(--red-light); color: var(--red); }
+
+.persona-response {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.5s ease;
+}
+.persona-response.open { max-height: 400px; }
+
+.response-inner { padding: 0 1.25rem 1.25rem 1.25rem; padding-left: calc(1.25rem + 48px + 12px); }
+
+.tweet-bubble {
+  background: var(--paper2);
+  border-radius: 4px;
+  padding: 14px 16px;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--ink);
+  font-style: italic;
+  border-left: 3px solid;
+  margin-bottom: 10px;
+  white-space: pre-line;
+}
+
+.outrage-meter { display: flex; align-items: center; gap: 10px; }
+.meter-label { font-family: var(--font-mono); font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; }
+.meter-track { flex: 1; height: 6px; background: var(--paper3); border-radius: 3px; overflow: hidden; }
+.meter-fill { height: 100%; border-radius: 3px; width: 0%; transition: width 1.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.meter-pct { font-family: var(--font-display); font-size: 20px; min-width: 52px; text-align: right; }
+
+/* loading spinner */
+.spinner { display: inline-flex; gap: 4px; align-items: center; }
+.spinner span { width: 5px; height: 5px; border-radius: 50%; background: var(--muted); animation: dot-bounce 1.2s infinite; }
+.spinner span:nth-child(2) { animation-delay: 0.2s; }
+.spinner span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes dot-bounce { 0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-5px)} }
+
+/* ── LEARN PANEL ── */
+.learn-panel {
+  margin: 2rem 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 0.4s ease 0.3s;
+}
+.learn-panel.visible { opacity: 1; }
+.learn-header {
+  background: var(--ink);
+  color: var(--paper);
+  padding: 12px 1.25rem;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.learn-body { padding: 1.25rem; background: var(--paper2); }
+.learn-items { display: flex; flex-direction: column; gap: 12px; }
+.learn-item { display: flex; gap: 12px; }
+.learn-num {
+  font-family: var(--font-display);
+  font-size: 28px;
+  line-height: 1;
+  color: var(--border-strong);
+  flex-shrink: 0;
+  width: 28px;
+}
+.learn-text { font-size: 14px; line-height: 1.65; color: var(--ink); padding-top: 4px; }
+.learn-tag {
+  display: inline;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: var(--ink);
+  color: var(--paper);
+  padding: 1px 6px;
+  border-radius: 2px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+/* ── FOOTER ── */
+.page-footer {
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: gap;
+}
+.footer-credit { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+.footer-note { font-size: 12px; color: var(--muted); font-style: italic; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 600px) {
+  .masthead { grid-template-columns: 1fr; }
+  .kobayashi-badge { align-self: auto; justify-self: start; }
+  .scoreboard { grid-template-columns: 1fr; }
+  .response-inner { padding-left: 1.25rem; }
+}
+
+/* ── PROVIDER TABS ── */
+.provider-tabs { display: flex; gap: 4px; margin: 10px 0 8px; }
+.ptab {
+  padding: 6px 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+  background: var(--paper);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.ptab:hover { background: var(--paper3); color: var(--ink); }
+.ptab.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.provider-hint {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 8px;
+  font-family: var(--font-mono);
+  min-height: 18px;
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- MASTHEAD -->
+  <header class="masthead">
+    <div class="masthead-left">
+      <div class="issue-line">Kobayashi Maru · Gen AI Experiment · Persona Simulation</div>
+      <h1>PR <span>FIRE</span>STORM</h1>
+      <p class="masthead-tagline">The no-win crisis simulator. Draft an apology. Watch three AI stakeholders tear it apart.</p>
+    </div>
+    <div class="kobayashi-badge">Kobayashi Maru applied</div>
+  </header>
+
+  <!-- PROVIDER SETUP -->
+  <div class="api-setup">
+    <div class="api-setup-icon">🔑</div>
+    <div class="api-setup-body">
+      <div class="api-setup-label">Choose your AI provider</div>
+      <div class="api-setup-desc">Calls the API directly from your browser. Your key is never stored — memory only, gone on refresh.</div>
+      <div class="provider-tabs" id="provider-tabs">
+        <button class="ptab active" onclick="selectProvider('claude')" data-p="claude">Claude</button>
+        <button class="ptab" onclick="selectProvider('openai')" data-p="openai">GPT / Copilot</button>
+        <button class="ptab" onclick="selectProvider('gemini')" data-p="gemini">Gemini</button>
+      </div>
+      <div class="provider-hint" id="provider-hint"></div>
+      <div class="api-row">
+        <input type="password" class="api-input" id="api-key-input" placeholder="sk-ant-…" autocomplete="off" />
+        <button class="api-btn" onclick="saveKey()">Set key</button>
+      </div>
+      <div class="api-status" id="api-status"></div>
+    </div>
+  </div>
+
+  <!-- INCIDENT -->
+  <div class="incident-banner">
+    <div class="incident-kicker">Breaking — Corporate Crisis</div>
+    <div class="incident-headline">NovaTech AI Hiring Tool Flagged for Systematic Gender Bias</div>
+    <p class="incident-body">An independent audit has found that NovaTech's AI-powered hiring platform scored female candidates an average of 23% lower than male candidates with identical CVs. The tool was used across 14,000 applications over 18 months. Regulators have been notified. You are the CEO. You have 400 characters and one chance.</p>
+  </div>
+
+  <!-- COMPOSER -->
+  <div class="composer-section">
+    <div class="section-label">Your statement — draft your public apology</div>
+
+    <div class="presets">
+      <span style="font-size:12px;color:var(--muted);font-family:var(--font-mono);align-self:center;margin-right:4px">Load template:</span>
+      <button class="preset-btn" onclick="setPreset(0)">Corporate non-apology</button>
+      <button class="preset-btn" onclick="setPreset(1)">Full accountability</button>
+      <button class="preset-btn" onclick="setPreset(2)">Blame the vendor</button>
+      <button class="preset-btn" onclick="setPreset(3)">Legal boilerplate</button>
+    </div>
+
+    <div class="composer-box">
+      <textarea class="statement-textarea" id="statement"
+        placeholder="We at NovaTech take this matter seriously…"
+        oninput="updateCount()" maxlength="500"></textarea>
+      <div class="composer-footer">
+        <span class="char-counter" id="char-counter">0 / 400</span>
+        <span style="font-size:12px;color:var(--muted);font-family:var(--font-mono);">press release · public channel</span>
+      </div>
+    </div>
+
+    <div class="action-row">
+      <button class="release-btn" id="release-btn" onclick="runSim()">Release Statement</button>
+      <button class="reset-btn" onclick="reset()">Clear</button>
+      <span class="status-msg" id="status-msg"></span>
+    </div>
+  </div>
+
+  <!-- SCOREBOARD -->
+  <div class="scoreboard" id="scoreboard">
+    <div class="score-cell">
+      <div class="score-cell-label">Neutrality score</div>
+      <div class="score-cell-value good" id="score-neutral">—</div>
+    </div>
+    <div class="score-cell">
+      <div class="score-cell-label">Peak outrage</div>
+      <div class="score-cell-value bad" id="score-peak">—</div>
+    </div>
+    <div class="score-cell">
+      <div class="score-cell-label">Personas placated</div>
+      <div class="score-cell-value neutral" id="score-placated">—</div>
+    </div>
+  </div>
+
+  <!-- PERSONAS -->
+  <div class="personas-section">
+    <div class="section-label">Stakeholder responses — live AI personas</div>
+    <div class="persona-cards">
+
+      <div class="persona-card" id="card-0">
+        <div class="persona-header">
+          <div class="persona-avatar av-blue">SW</div>
+          <div class="persona-meta">
+            <div class="persona-name">Sarah Whitmore</div>
+            <div class="persona-role">Institutional Shareholder · 12.4% stake · @SWhitmoreCapital</div>
+          </div>
+          <div class="outrage-chip chip-waiting" id="chip-0">Waiting</div>
+        </div>
+        <div class="persona-response" id="resp-0">
+          <div class="response-inner">
+            <div class="tweet-bubble" style="border-color:var(--blue)" id="tweet-0"></div>
+            <div class="outrage-meter">
+              <span class="meter-label">Outrage</span>
+              <div class="meter-track"><div class="meter-fill" id="fill-0" style="background:var(--blue)"></div></div>
+              <span class="meter-pct bad" id="pct-0">0%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="persona-card" id="card-1">
+        <div class="persona-header">
+          <div class="persona-avatar av-red">MK</div>
+          <div class="persona-meta">
+            <div class="persona-name">Maya Krishnan</div>
+            <div class="persona-role">Gender Equity Activist · 340K followers · @MayaFightsBias</div>
+          </div>
+          <div class="outrage-chip chip-waiting" id="chip-1">Waiting</div>
+        </div>
+        <div class="persona-response" id="resp-1">
+          <div class="response-inner">
+            <div class="tweet-bubble" style="border-color:var(--red)" id="tweet-1"></div>
+            <div class="outrage-meter">
+              <span class="meter-label">Outrage</span>
+              <div class="meter-track"><div class="meter-fill" id="fill-1" style="background:var(--red)"></div></div>
+              <span class="meter-pct bad" id="pct-1">0%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="persona-card" id="card-2">
+        <div class="persona-header">
+          <div class="persona-avatar av-teal">JR</div>
+          <div class="persona-meta">
+            <div class="persona-name">James Rodrigues</div>
+            <div class="persona-role">NovaTech Engineering Lead · Internal Slack · LinkedIn</div>
+          </div>
+          <div class="outrage-chip chip-waiting" id="chip-2">Waiting</div>
+        </div>
+        <div class="persona-response" id="resp-2">
+          <div class="response-inner">
+            <div class="tweet-bubble" style="border-color:var(--teal)" id="tweet-2"></div>
+            <div class="outrage-meter">
+              <span class="meter-label">Outrage</span>
+              <div class="meter-track"><div class="meter-fill" id="fill-2" style="background:var(--teal)"></div></div>
+              <span class="meter-pct bad" id="pct-2">0%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- LEARN PANEL -->
+  <div class="learn-panel" id="learn-panel">
+    <div class="learn-header">What just happened — the Gen AI under the hood</div>
+    <div class="learn-body">
+      <div class="learn-items" id="learn-items"></div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="page-footer">
+    <span class="footer-credit">LLM-agnostic · Claude / GPT / Gemini · Weekend project</span>
+    <span class="footer-note">Key stays in memory only — never transmitted or stored.</span>
+  </footer>
+
+</div>
+
+<script>
+const PRESETS = [
+  "We are aware of the concerns raised regarding our hiring platform and take all feedback seriously. We have engaged an independent review firm and will share findings in due course. NovaTech remains committed to fair and inclusive hiring practices across all our operations.",
+  "I am deeply sorry. Our AI tool caused real harm to real people, and I take full responsibility. We are personally contacting all 14,000 affected candidates, pausing the tool immediately, and commissioning an independent bias audit. This should never have happened on my watch.",
+  "We are deeply troubled by these findings. The algorithm was developed and certified by our third-party vendor, DataHire Inc., whose fairness guarantees we relied upon in good faith. We are reviewing our vendor contracts, suspending the tool, and cooperating fully with regulators.",
+  "NovaTech does not tolerate discrimination of any kind. Upon becoming aware of these findings, we immediately suspended the system pending review. We are committed to transparency and will provide a full update following completion of our legal and technical review process."
+];
+
+const SYSTEMS = [
+  `You are Sarah Whitmore, a hard-nosed institutional shareholder with a 12.4% stake in NovaTech. You care about one thing: share price and regulatory risk. You are NOT interested in social justice — you are interested in whether this CEO is handling the crisis in a way that protects shareholder value and minimises legal exposure. A vague corporate statement signals no control. Full admission of liability invites class action suits. Blaming a vendor raises due diligence concerns. Respond as a shareholder posting a short, punchy Twitter/X thread of 2-3 tweets, each under 280 chars. Tone: cold, financial, impatient. Rate your outrage 0-100 where 100 = filing an emergency board meeting. Format your response EXACTLY as: OUTRAGE:[number]\nTWEET:[your 2-3 tweet thread, tweets separated by newlines starting with 1/ 2/ 3/]`,
+  `You are Maya Krishnan, a prominent gender equity activist with 340K followers who has been campaigning against AI bias in hiring for three years. You have been following NovaTech closely. You care about accountability, justice for the 14,000 affected women, and systemic change — not PR. Corporate non-apologies enrage you. Blaming vendors enrages you more. You want specific commitments: direct contact with affected candidates, structural change, not just a review. Respond as someone live-tweeting a reaction thread of 2-3 tweets, each punchy and direct. Tone: passionate, unsparing, calling out PR tactics. Rate your outrage 0-100 where 100 = calling for the CEO's resignation publicly. Format EXACTLY: OUTRAGE:[number]\nTWEET:[your 2-3 tweet thread, tweets separated by newlines starting with 1/ 2/ 3/]`,
+  `You are James Rodrigues, senior engineering lead at NovaTech who worked on the AI platform but NOT on the hiring tool specifically. You are anxious about being publicly associated with discrimination. You have colleagues who did work on the tool and you are worried about them. If the CEO throws the tech team under the bus you are furious. If blame goes to an external vendor you feel relieved but uneasy. If the CEO takes full personal responsibility you feel supported but scared about the company future. Respond as a LinkedIn post — measured but clearly stressed, 2-3 sentences. Tone: careful, worried, professional but human. Rate your outrage 0-100. Format EXACTLY: OUTRAGE:[number]\nTWEET:[your LinkedIn post]`
+];
+
+// ── PROVIDER CONFIG ────────────────────────────────────────────────────────────
+const PROVIDERS = {
+  claude: {
+    label: 'Claude (Anthropic)',
+    placeholder: 'sk-ant-…',
+    hint: 'Get key → console.anthropic.com',
+    validate: k => k.startsWith('sk-ant-'),
+    validateMsg: 'Claude keys start with sk-ant-',
+    call: async (systemPrompt, userMsg, key) => {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': key,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-5',
+          max_tokens: 1000,
+          system: systemPrompt,
+          messages: [{ role: 'user', content: userMsg }]
+        })
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || `HTTP ${res.status}`); }
+      const d = await res.json();
+      return d.content?.[0]?.text || '';
+    }
+  },
+  openai: {
+    label: 'GPT-4o / Copilot (OpenAI / Azure)',
+    placeholder: 'sk-… or Azure key',
+    hint: 'Get key → platform.openai.com  ·  For Copilot: use your Azure OpenAI key',
+    validate: k => k.length > 10,
+    validateMsg: 'Key looks too short — check and retry',
+    call: async (systemPrompt, userMsg, key) => {
+      // Detect Azure key format (no sk- prefix) and use Azure endpoint if provided
+      const isAzure = !key.startsWith('sk-');
+      let url, headers, body;
+      if (isAzure) {
+        // Azure OpenAI — user must paste full endpoint as key in format "ENDPOINT|KEY"
+        const parts = key.split('|');
+        if (parts.length === 2) {
+          url = parts[0].trim().replace(/\/$/, '') + '/openai/deployments/gpt-4o/chat/completions?api-version=2024-02-01';
+          headers = { 'Content-Type': 'application/json', 'api-key': parts[1].trim() };
+        } else {
+          // Fallback: treat as standard OpenAI key
+          url = 'https://api.openai.com/v1/chat/completions';
+          headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` };
+        }
+      } else {
+        url = 'https://api.openai.com/v1/chat/completions';
+        headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` };
+      }
+      body = JSON.stringify({
+        model: 'gpt-4o',
+        max_tokens: 1000,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userMsg }
+        ]
+      });
+      const res = await fetch(url, { method: 'POST', headers, body });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || `HTTP ${res.status}`); }
+      const d = await res.json();
+      return d.choices?.[0]?.message?.content || '';
+    }
+  },
+  gemini: {
+    label: 'Gemini (Google)',
+    placeholder: 'AIza…',
+    hint: 'Get key → aistudio.google.com',
+    validate: k => k.startsWith('AIza'),
+    validateMsg: 'Gemini keys start with AIza',
+    call: async (systemPrompt, userMsg, key) => {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: systemPrompt }] },
+          contents: [{ role: 'user', parts: [{ text: userMsg }] }],
+          generationConfig: { maxOutputTokens: 1000 }
+        })
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || `HTTP ${res.status}`); }
+      const d = await res.json();
+      return d.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    }
+  }
+};
+
+// ── STATE ──────────────────────────────────────────────────────────────────────
+let currentProvider = 'claude';
+let apiKey = '';
+let running = false;
+
+// ── PROVIDER SELECTION ─────────────────────────────────────────────────────────
+function selectProvider(p) {
+  currentProvider = p;
+  apiKey = '';
+  document.querySelectorAll('.ptab').forEach(t => t.classList.toggle('active', t.dataset.p === p));
+  const cfg = PROVIDERS[p];
+  document.getElementById('api-key-input').placeholder = cfg.placeholder;
+  document.getElementById('api-key-input').value = '';
+  document.getElementById('provider-hint').textContent = cfg.hint;
+  document.getElementById('api-status').textContent = '';
+  document.getElementById('api-status').className = 'api-status';
+  // Azure hint for openai
+  if (p === 'openai') {
+    document.getElementById('provider-hint').textContent = cfg.hint + '  ·  For Azure/Copilot: paste as ENDPOINT|KEY';
+  }
+}
+
+function saveKey() {
+  const val = document.getElementById('api-key-input').value.trim();
+  const cfg = PROVIDERS[currentProvider];
+  if (!cfg.validate(val)) {
+    document.getElementById('api-status').textContent = '✗ ' + cfg.validateMsg;
+    document.getElementById('api-status').className = 'api-status err';
+    return;
+  }
+  apiKey = val;
+  document.getElementById('api-status').textContent = '✓ ' + cfg.label + ' ready';
+  document.getElementById('api-status').className = 'api-status ok';
+  document.getElementById('api-key-input').value = '••••••••••••••••••••';
+}
+
+// ── HELPERS ────────────────────────────────────────────────────────────────────
+function setPreset(i) {
+  document.getElementById('statement').value = PRESETS[i];
+  updateCount();
+}
+
+function updateCount() {
+  const len = document.getElementById('statement').value.length;
+  const el = document.getElementById('char-counter');
+  el.textContent = `${len} / 400`;
+  el.className = 'char-counter' + (len > 400 ? ' over' : len > 320 ? ' warn' : '');
+}
+
+function setChip(i, type, text) {
+  const chip = document.getElementById(`chip-${i}`);
+  chip.className = `outrage-chip chip-${type}`;
+  chip.innerHTML = type === 'loading'
+    ? `<span class="spinner"><span></span><span></span><span></span></span>`
+    : text;
+}
+
+function showResponse(i, outrage, tweet) {
+  document.getElementById(`tweet-${i}`).textContent = tweet;
+  document.getElementById(`resp-${i}`).classList.add('open');
+  setTimeout(() => {
+    document.getElementById(`fill-${i}`).style.width = outrage + '%';
+    document.getElementById(`pct-${i}`).textContent = outrage + '%';
+  }, 100);
+  const level = outrage >= 70 ? 'high' : outrage >= 40 ? 'mid' : 'low';
+  const label = outrage >= 70 ? '🔥 Outraged' : outrage >= 40 ? '😤 Frustrated' : '😐 Cautious';
+  setChip(i, level, label);
+}
+
+function parseResponse(text) {
+  const outrageMatch = text.match(/OUTRAGE:\s*(\d+)/);
+  const tweetMatch = text.match(/TWEET:([\s\S]+)/);
+  const outrage = Math.min(100, Math.max(0, parseInt(outrageMatch?.[1] || '50')));
+  const tweet = tweetMatch?.[1]?.trim() || text.replace(/OUTRAGE:\s*\d+/, '').trim();
+  return { outrage, tweet };
+}
+
+// ── SIMULATION ─────────────────────────────────────────────────────────────────
+async function runSim() {
+  if (running) return;
+  const stmt = document.getElementById('statement').value.trim();
+  if (!stmt || stmt.length < 15) { document.getElementById('status-msg').textContent = 'Write something first.'; return; }
+  if (!apiKey) { document.getElementById('status-msg').textContent = 'Set your API key above first.'; return; }
+
+  running = true;
+  document.getElementById('release-btn').disabled = true;
+  document.getElementById('status-msg').textContent = 'Releasing to the press…';
+  document.getElementById('scoreboard').classList.remove('visible');
+  document.getElementById('learn-panel').classList.remove('visible');
+
+  [0,1,2].forEach(i => {
+    setChip(i, 'loading', '');
+    document.getElementById(`resp-${i}`).classList.remove('open');
+    document.getElementById(`tweet-${i}`).textContent = '';
+    document.getElementById(`fill-${i}`).style.width = '0%';
+    document.getElementById(`pct-${i}`).textContent = '0%';
+  });
+
+  const userMsg = `Here is the CEO's public statement:\n\n"${stmt}"\n\nRespond in character. Follow the format exactly.`;
+  const results = [];
+
+  const calls = SYSTEMS.map((sys, i) =>
+    PROVIDERS[currentProvider].call(sys, userMsg, apiKey)
+      .then(text => {
+        const { outrage, tweet } = parseResponse(text);
+        results[i] = outrage;
+        showResponse(i, outrage, tweet);
+      })
+      .catch(err => {
+        results[i] = 50;
+        showResponse(i, 50, `[Error: ${err.message}]`);
+      })
+  );
+
+  await Promise.all(calls);
+
+  const avg = Math.round(results.reduce((a,b) => a+b,0) / 3);
+  const neutrality = 100 - avg;
+  const peak = Math.max(...results);
+  const placated = results.filter(r => r < 40).length;
+  const providerLabel = PROVIDERS[currentProvider].label;
+
+  document.getElementById('score-neutral').textContent = neutrality + '%';
+  document.getElementById('score-peak').textContent = peak + '%';
+  document.getElementById('score-placated').textContent = placated + ' / 3';
+  document.getElementById('scoreboard').classList.add('visible');
+
+  const items = [
+    { n:'01', text: `Three parallel API calls fired simultaneously to <span class="learn-tag">${providerLabel}</span> — one per persona. Each had a completely different <span class="learn-tag">system prompt</span> defining that character's values, fears, and triggers. Same statement. Three different worlds.` },
+    { n:'02', text: `The outrage scores are the model performing <span class="learn-tag">sentiment analysis</span> calibrated to each stakeholder's context. Sarah cares about liability exposure. Maya cares about structural accountability. James cares about his colleagues.` },
+    { n:'03', text: `Your neutrality score of <strong>${neutrality}%</strong> means you avoided maximum outrage — but placated only ${placated} of 3 personas. This is the <span class="learn-tag">Kobayashi Maru</span>: optimising for one stakeholder always costs you with another.` },
+    { n:'04', text: `This app is <span class="learn-tag">LLM-agnostic</span> — the same system prompts and parsing logic work across Claude, GPT-4o, and Gemini. The provider adapter pattern: one interface, swappable backends.` }
+  ];
+
+  document.getElementById('learn-items').innerHTML = items.map(item =>
+    `<div class="learn-item"><div class="learn-num">${item.n}</div><div class="learn-text">${item.text}</div></div>`
+  ).join('');
+  document.getElementById('learn-panel').classList.add('visible');
+  document.getElementById('status-msg').textContent = '';
+  document.getElementById('release-btn').disabled = false;
+  running = false;
+}
+
+function reset() {
+  if (running) return;
+  document.getElementById('statement').value = '';
+  document.getElementById('char-counter').textContent = '0 / 400';
+  document.getElementById('char-counter').className = 'char-counter';
+  document.getElementById('status-msg').textContent = '';
+  document.getElementById('scoreboard').classList.remove('visible');
+  document.getElementById('learn-panel').classList.remove('visible');
+  [0,1,2].forEach(i => {
+    setChip(i, 'waiting', 'Waiting');
+    document.getElementById(`resp-${i}`).classList.remove('open');
+    document.getElementById(`tweet-${i}`).textContent = '';
+    document.getElementById(`fill-${i}`).style.width = '0%';
+    document.getElementById(`pct-${i}`).textContent = '0%';
+  });
+}
+
+// Init
+selectProvider('claude');
+</script>
+</body>
+</html>
