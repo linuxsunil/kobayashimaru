@@ -1,5 +1,7 @@
 # PR Firestorm 🌪️ — The Kobayashi Maru Experiment
 
+**[Try the Live Simulator Here](https://linuxsunil.github.io/kobayashimaru/)** 🎮
+
 > "Trace it back far enough and the human disappears. That's the problem."
 
 **PR Firestorm** is a weekend project exploring the "no-win scenario" in modern corporate communications. Using Gen AI, the simulator creates a high-pressure environment where every public statement leads to a calculated "outrage" from conflicting stakeholders.
